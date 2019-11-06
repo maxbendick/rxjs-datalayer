@@ -1,48 +1,32 @@
-import { Observable, Observer, ReplaySubject, Subscription } from 'rxjs'
-import { filter, share } from 'rxjs/operators'
+import { Observable } from 'rxjs'
+import { Future } from './future'
+import { Nil } from './nil'
+import { PaginationFunction } from './pagination'
 
 // can add methods that either return singles or collections
 
 // add arbirtrary methods to query singles or collections
 
-type Future<A> = A | Promise<A> | Observable<A>
-type ReturnsFuture<A> = (...args: any[]) => Future<A>
+type ReturnsFuture<A, Args extends any[]> = (...args: Args) => Future<A>
 
-/**
- * Handles pagination by page number and/or by next page key
- */
-type PaginationFunction = <A, State, QueryOptions>(
-  queryOptions: QueryOptions,
-) => (
-  prevState: State,
-) => Future<{
-  nextState: State
-  result: A[]
-}>
-
-type SinglesConfig<A> = {
-  [key: string]: ReturnsFuture<A>
-}
-
-type CollectionsConfig<A> = {
-  [key: string]: ReturnsFuture<A[]>
-}
-
-type MutationsConfig<A> = {
-  [key: string]: ReturnsFuture<A>
+type FunctionsThatReturnFutures<A> = {
+  [methodName: string]: ReturnsFuture<A, any>
 }
 
 type PaginationsConfig<A> = {
-  [key: string]: PaginationFunction[]
+  [methodName: string]: PaginationFunction[]
 }
 
-interface EndpointConfig<A> {
-  singleGetters: SinglesConfig<A>
-  collectionGetters: CollectionsConfig<A>
-  singleMutators: MutationsConfig<A>
+interface EntityConfig<A, Id> {
+  getId: (a: A) => Id
+  idsEqual: (a: Id, b: Id) => any
+  getById: (id: Id) => Future<A>
+  singleGetters: FunctionsThatReturnFutures<A>
+  collectionGetters: FunctionsThatReturnFutures<A[]>
+  singleMutators: FunctionsThatReturnFutures<A | Nil>
   paginations: PaginationsConfig<A>
 }
 
-interface PaginatingByNumber {}
-
-interface PaginatingByPrev {}
+interface EntityManager<A, Id> {
+  getFromCacheById: (id: Id) => Observable<A>
+}
